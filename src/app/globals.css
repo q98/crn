@@ -24,3 +24,19 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Force dark text for all input and textarea elements */
+input, textarea, select {
+  color: #111827 !important; /* gray-900 */
+  font-weight: 600 !important;
+}
+
+input::placeholder, textarea::placeholder {
+  color: #6b7280 !important; /* gray-500 */
+  opacity: 1 !important;
+}
+
+/* Ensure focus states maintain dark text */
+input:focus, textarea:focus, select:focus {
+  color: #111827 !important; /* gray-900 */
+}

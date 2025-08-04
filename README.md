@@ -1,36 +1,97 @@
+# SHP Management Platform
+
+A comprehensive web-based solution designed to address the operational crisis at Sweet Home Productions (SHP) and provide a centralized system for managing clients, credentials, tasks, and monitoring website health.
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 18.x or later
+- npm or yarn
+
+### Installation
+
+1. Clone the repository
+
+```bash
+git clone <repository-url>
+cd shp-management-platform
+```
+
+2. Install dependencies
+
+```bash
+npm install
+# or
+yarn install
+```
+
+3. Set up the database
+
+```bash
+npx prisma migrate dev --name init
+```
+
+This will create the SQLite database file and apply the schema.
+
+4. Start the development server
 
 ```bash
 npm run dev
 # or
 yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a custom font.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Features
+
+- **Client & Asset Dashboard**: Centralized view of all clients, domains, and hosting accounts
+- **Secure Credential Vault**: Encrypted storage for all login credentials
+- **Task Management & Time Tracking**: Manage tasks and track billable hours
+- **Automated Health Monitoring**: Monitor website status and SSL certificates
+- **Owner's Dashboard**: Simplified interface for high-level business metrics
+
+## Technology Stack
+
+### Frontend
+- Next.js with TypeScript
+- Tailwind CSS for styling
+- NextAuth.js for authentication
+- React Query for data fetching
+- Recharts for data visualization
+
+### Backend
+- Node.js
+- Prisma ORM
+- SQLite database
+- AES-256 encryption for sensitive data
+
+## Project Structure
+
+```
+/src
+  /app - Next.js app directory structure
+  /components - Reusable UI components
+  /lib - Utility functions and shared code
+  /api - API routes and handlers
+  /types - TypeScript type definitions
+/prisma - Database schema and migrations
+```
 
 ## Learn More
 
-To learn more about Next.js, take a look at the following resources:
+To learn more about the technologies used in this project:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- [Next.js Documentation](https://nextjs.org/docs)
+- [Prisma Documentation](https://www.prisma.io/docs)
+- [Tailwind CSS Documentation](https://tailwindcss.com/docs)
+- [NextAuth.js Documentation](https://next-auth.js.org/)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Deployment
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Follow the deployment guide in the project documentation for production deployment instructions.

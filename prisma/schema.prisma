@@ -1,0 +1,343 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// User model for authentication and role-based access
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  password      String
+  role          UserRole  @default(ADMIN)
+  hourlyRate    Float?    // Developer hourly rate for payment tracking
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  tasks         Task[]    @relation("AssignedTasks")
+  createdTasks  Task[]    @relation("TaskCreator")
+  timeEntries   TimeEntry[] @relation("DeveloperTimeEntries")
+  imports       ImportHistory[] @relation("UserImports")
+  createdProjects Project[] @relation("ProjectCreator")
+  comments      Comment[] @relation("UserComments")
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+}
+
+// Client model for managing the 189 server accounts
+model Client {
+  id              String           @id @default(cuid())
+  domainName      String           @unique
+  cPanelUsername  String?
+  diskUsage       String?
+  verificationStatus VerificationStatus @default(UNKNOWN)
+  registrar       String?
+  notes           String?
+  annualHourAllowance Float         @default(2.0) // Free hours per calendar year
+  yearlyHoursUsed Float            @default(0.0) // Hours used in current year
+  lastYearReset   DateTime?        // Track when yearly hours were last reset
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  credentials     Credential[]     @relation("ClientCredentials")
+  tasks           Task[]           @relation("ClientTasks")
+  healthChecks    HealthCheck[]    @relation("ClientHealthChecks")
+  invoices        Invoice[]        @relation("ClientInvoices")
+  domains         Domain[]         @relation("ClientDomains")
+  projects        Project[]        @relation("ClientProjects")
+}
+
+enum VerificationStatus {
+  ACTIVE_SHP_REGISTRAR
+  ACTIVE_NEEDS_LOGIN
+  AT_RISK
+  LOST
+  WASTED_SPACE
+  UNKNOWN
+}
+
+// Credential model for secure storage of logins
+model Credential {
+  id              String    @id @default(cuid())
+  service         String
+  url             String?
+  username        String
+  password        String
+  pin             String?
+  securityQuestions Json?
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  client          Client?   @relation("ClientCredentials", fields: [clientId], references: [id])
+  clientId        String?
+}
+
+// Task model for task management and time tracking
+model Task {
+  id              String    @id @default(cuid())
+  title           String
+  description     String?
+  status          TaskStatus @default(OPEN)
+  priority        Priority   @default(MEDIUM)
+  estimatedHours  Float?    // Estimated hours to complete the task
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  dueDate         DateTime?
+  completedAt     DateTime?
+  client          Client?   @relation("ClientTasks", fields: [clientId], references: [id])
+  clientId        String?
+  assignedTo      User?     @relation("AssignedTasks", fields: [assignedToId], references: [id])
+  assignedToId    String?
+  createdBy       User      @relation("TaskCreator", fields: [createdById], references: [id])
+  createdById     String
+  timeEntries     TimeEntry[] @relation("TaskTimeEntries")
+  project         Project?    @relation("ProjectTasks", fields: [projectId], references: [id])
+  projectId       String?
+  comments        Comment[]   @relation("TaskComments")
+}
+
+// Project model for organizing tasks
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  status      ProjectStatus @default(ACTIVE)
+  startDate   DateTime?
+  endDate     DateTime?
+  budget      Float?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  client      Client   @relation("ClientProjects", fields: [clientId], references: [id])
+  clientId    String
+  createdBy   User     @relation("ProjectCreator", fields: [createdById], references: [id])
+  createdById String
+  tasks       Task[]   @relation("ProjectTasks")
+}
+
+enum ProjectStatus {
+  ACTIVE
+  COMPLETED
+  ON_HOLD
+  CANCELLED
+}
+
+// Comment model for task discussions
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  task      Task     @relation("TaskComments", fields: [taskId], references: [id])
+  taskId    String
+  author    User     @relation("UserComments", fields: [authorId], references: [id])
+  authorId  String
+}
+
+enum TaskStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum BillingStatus {
+  PENDING
+  BILLED
+  PAID
+  WRITTEN_OFF
+}
+
+// TimeEntry model for tracking developer time
+model TimeEntry {
+  id                String        @id @default(cuid())
+  description       String?
+  startTime         DateTime
+  endTime           DateTime?
+  duration          Int?          // Duration in minutes
+  isBilled          Boolean       @default(false)
+  billingStatus     BillingStatus @default(PENDING)
+  hourlyRate        Float?
+  billableAmount    Float?
+  developerAmount   Float?
+  isWithinAllowance Boolean       @default(false)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  task              Task          @relation("TaskTimeEntries", fields: [taskId], references: [id])
+  taskId            String
+  developer         User?         @relation("DeveloperTimeEntries", fields: [developerId], references: [id])
+  developerId       String?
+}
+
+// HealthCheck model for monitoring client server health
+model HealthCheck {
+  id        String   @id @default(cuid())
+  checkType CheckType
+  status    CheckStatus
+  details   String?
+  checkedAt DateTime @default(now())
+  client    Client   @relation("ClientHealthChecks", fields: [clientId], references: [id])
+  clientId  String
+}
+
+enum CheckType {
+  UPTIME
+  DISK_SPACE
+  SSL_CERTIFICATE
+  BACKUP_STATUS
+  CUSTOM
+}
+
+enum CheckStatus {
+  HEALTHY
+  WARNING
+  CRITICAL
+  UNKNOWN
+}
+
+// Invoice model for billing and payment tracking
+model Invoice {
+  id            String        @id @default(cuid())
+  invoiceNumber String        @unique
+  client        Client        @relation("ClientInvoices", fields: [clientId], references: [id])
+  clientId      String
+  totalHours    Float
+  totalAmount   Float
+  billingPeriod Json          // { startDate: Date, endDate: Date }
+  status        InvoiceStatus @default(DRAFT)
+  generatedAt   DateTime      @default(now())
+  sentAt        DateTime?
+  paidAt        DateTime?
+  dueDate       DateTime
+  timeEntries   Json          // Array of time entry IDs
+  notes         String?
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+// Report model for storing generated reports
+model Report {
+  id          String   @id @default(cuid())
+  title       String
+  dateRange   Json      // { startDate: Date, endDate: Date }
+  totalHours  Float
+  totalAmount Float?
+  generatedAt DateTime  @default(now())
+  clientId    String
+  reportData  Json      // Serialized report data
+}
+
+// ImportHistory model for tracking data imports and enabling rollback
+model ImportHistory {
+  id              String    @id @default(cuid())
+  title           String
+  type            ImportType
+  status          ImportStatus
+  fileName        String
+  importedCount   Int       @default(0)
+  errorCount      Int       @default(0)
+  warningCount    Int       @default(0)
+  canRollback     Boolean   @default(true)
+  importedAt      DateTime  @default(now())
+  rolledBackAt    DateTime?
+  importedBy      User      @relation("UserImports", fields: [importedById], references: [id])
+  importedById    String
+  importData      Json      // Store imported record IDs for rollback
+  errorDetails    Json?     // Store error and warning details
+  rollbackData    Json?     // Store rollback information
+}
+
+enum ImportType {
+  CLIENT
+  CREDENTIAL
+  TASK
+}
+
+enum ImportStatus {
+  SUCCESS
+  PARTIAL
+  FAILED
+  ROLLED_BACK
+}
+
+// Domain model for domain verification and management
+model Domain {
+  id                    String    @id @default(cuid())
+  domainName            String    @unique
+  clientId              String
+  client                Client    @relation("ClientDomains", fields: [clientId], references: [id])
+  verificationStatus    DomainVerificationStatus @default(PENDING)
+  whoisData             Json?     // Raw WHOIS response data
+  registrantName        String?
+  registrantEmail       String?
+  registrantOrg         String?
+  registrar             String?
+  creationDate          DateTime?
+  expirationDate        DateTime?
+  lastUpdated           DateTime?
+  nameservers           Json?     // Array of nameserver strings
+  dnssec                Boolean?  // DNSSEC status
+  lastVerified          DateTime?
+  nextVerificationDue   DateTime?
+  verificationInterval  Int       @default(30) // Days between verifications
+  autoVerify            Boolean   @default(true)
+  isActive              Boolean   @default(true) // Whether domain is active for monitoring
+  ownershipChanged      Boolean   @default(false) // Whether ownership has changed since last verification
+  notes                 String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  verificationHistory   DomainVerificationHistory[] @relation("DomainVerifications")
+}
+
+enum DomainVerificationStatus {
+  PENDING
+  VERIFIED
+  FAILED
+  EXPIRED
+  OWNERSHIP_CHANGED
+  PRIVACY_PROTECTED
+}
+
+// Domain verification history for audit trail
+model DomainVerificationHistory {
+  id                String    @id @default(cuid())
+  domainId          String
+  domain            Domain    @relation("DomainVerifications", fields: [domainId], references: [id])
+  verificationStatus DomainVerificationStatus
+  whoisData         Json?     // WHOIS data at time of verification
+  registrantName    String?
+  registrantEmail   String?
+  registrar         String?
+  expirationDate    DateTime?
+  verifiedAt        DateTime  @default(now())
+  verificationMethod String   // API provider used (e.g., "IP2WHOIS", "WhoisXML")
+  errorMessage      String?   // Error details if verification failed
+  changesDetected   Json?     // Array of detected changes from previous verification
+  verifiedBy        String?   // User ID who triggered manual verification
+  isAutomated       Boolean   @default(true)
+  responseTime      Int?      // API response time in milliseconds
+  notes             String?
+}
